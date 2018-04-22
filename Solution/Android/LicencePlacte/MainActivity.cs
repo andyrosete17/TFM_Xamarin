@@ -2,6 +2,8 @@
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
+using Android.Content.Res;
+using Android.Database;
 using Android.Graphics;
 using Android.OS;
 using Android.Provider;
@@ -12,6 +14,8 @@ using LicencePlacte.Enums;
 using LicencePlacte.Helper;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace LicencePlacte
 {
@@ -43,7 +47,7 @@ namespace LicencePlacte
         }
         private void CreateDirectoryForPictures()
         {
-            App._dir = new File(
+            App._dir = new Java.IO.File(
                 Android.OS.Environment.GetExternalStoragePublicDirectory(
                     Android.OS.Environment.DirectoryPictures), "CameraAppDemo");
             if (!App._dir.Exists())
@@ -63,7 +67,7 @@ namespace LicencePlacte
         private void TakeAPicture(object sender, EventArgs eventArgs)
         {
             Intent intent = new Intent(MediaStore.ActionImageCapture);
-            App._file = new File(App._dir, String.Format("myPhoto_{0}.jpg", Guid.NewGuid()));
+            App._file = new Java.IO.File(App._dir, String.Format("myPhoto_{0}.jpg", Guid.NewGuid()));
             intent.PutExtra(MediaStore.ExtraOutput, Android.Net.Uri.FromFile(App._file));
             StartActivityForResult(intent, (int)ActivityEnum.takePicture);
         }
@@ -96,12 +100,18 @@ namespace LicencePlacte
             }
         }
 
-        private void LoadImageFromGallery(int requestCode, Result resultCode, Intent data)
+        private  void LoadImageFromGallery(int requestCode, Result resultCode, Intent data)
         {
             if ((resultCode == Result.Ok) && (data != null))
             {
-                Android.Net.Uri uri = data.Data;
-                _imageView.SetImageURI(uri);
+                Stream stream = ContentResolver.OpenInputStream(data.Data);
+                Bitmap image = BitmapFactory.DecodeStream(stream);
+
+                int height = Resources.DisplayMetrics.HeightPixels;
+                int width = _imageView.Height;
+                var path = GetRealPathFromURI(data.Data);
+                Bitmap test = BitmapHelpers.LoadAndResizeBitmap(path,width, height);
+                _imageView.SetImageBitmap(test);
             }
         }
 
@@ -154,7 +164,6 @@ namespace LicencePlacte
             }
             return path;
         }
-
 
     }
 
