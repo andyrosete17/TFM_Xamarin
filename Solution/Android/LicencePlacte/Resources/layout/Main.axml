@@ -3,11 +3,6 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <ImageView
-        android:src="@android:drawable/ic_menu_gallery"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:id="@+id/imageView1" />
     <Button
         android:text="Take Image"
         android:layout_width="match_parent"
@@ -18,4 +13,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/LoadPictureBtn" />
+    <ImageView
+        android:src="@android:drawable/ic_menu_gallery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:adjustViewBounds="true"
+        android:id="@+id/imageView1" />
 </LinearLayout>

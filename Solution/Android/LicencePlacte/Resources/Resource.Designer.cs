@@ -44,14 +44,14 @@ namespace LicencePlacte
 		public partial class Id
 		{
 			
-			// aapt resource value: 0x7f040002
-			public const int LoadPictureBtn = 2130968578;
-			
 			// aapt resource value: 0x7f040001
-			public const int TakePictureBtn = 2130968577;
+			public const int LoadPictureBtn = 2130968577;
 			
 			// aapt resource value: 0x7f040000
-			public const int imageView1 = 2130968576;
+			public const int TakePictureBtn = 2130968576;
+			
+			// aapt resource value: 0x7f040002
+			public const int imageView1 = 2130968578;
 			
 			static Id()
 			{
