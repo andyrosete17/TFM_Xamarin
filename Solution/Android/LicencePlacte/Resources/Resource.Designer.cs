@@ -51,7 +51,10 @@ namespace LicencePlacte
 			public const int TakePictureBtn = 2130968576;
 			
 			// aapt resource value: 0x7f040002
-			public const int imageView1 = 2130968578;
+			public const int TesseractBtn = 2130968578;
+			
+			// aapt resource value: 0x7f040003
+			public const int imageView1 = 2130968579;
 			
 			static Id()
 			{
