@@ -21,7 +21,6 @@ namespace LicencePlacte
         /// <summary>
         /// Global variables
         /// </summary>
-        public static readonly int PickImageId = 1000;
         ImageView _imageView;
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -74,7 +73,7 @@ namespace LicencePlacte
             Intent = new Intent();
             Intent.SetType("image/*");
             Intent.SetAction(Intent.ActionGetContent);
-            StartActivityForResult(Intent.CreateChooser(Intent, "Select Picture"), PickImageId);
+            StartActivityForResult(Intent.CreateChooser(Intent, "Select Picture"), (int)ActivityEnum.loadPicture);
         }
 
         protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
@@ -87,7 +86,7 @@ namespace LicencePlacte
                     //Take a picture
                     TakePictureFromCamera();
                     break;
-                case 1000:
+                case 1:
                     //Load from gallery
                     LoadImageFromGallery(requestCode, resultCode, data);
                     break;
@@ -99,7 +98,7 @@ namespace LicencePlacte
 
         private void LoadImageFromGallery(int requestCode, Result resultCode, Intent data)
         {
-            if ((requestCode == PickImageId) && (resultCode == Result.Ok) && (data != null))
+            if ((resultCode == Result.Ok) && (data != null))
             {
                 Android.Net.Uri uri = data.Data;
                 _imageView.SetImageURI(uri);
