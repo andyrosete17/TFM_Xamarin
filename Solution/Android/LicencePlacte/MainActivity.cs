@@ -37,9 +37,12 @@ namespace LicencePlacte
         ImageView _imageView;
         private LicensePlateDetector _licensePlateDetector;
         private Mat img;
+        string path = "";
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
+
+            _licensePlateDetector = new LicensePlateDetector("x64/");
 
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.Main);
@@ -49,7 +52,7 @@ namespace LicencePlacte
             loadPictureBtn.Click += LoadPicture;
 
             Button tesseractBtn = FindViewById<Button>(Resource.Id.TesseractBtn);
-            //tesseractBtn.Click += ExecuteTesseract;
+            tesseractBtn.Click += ExecuteTesseract;
 
             if (IsThereAnAppToTakePictures())
             {
@@ -123,7 +126,7 @@ namespace LicencePlacte
 
                 int height = Resources.DisplayMetrics.HeightPixels;
                 int width = _imageView.Height;
-                var path = GetRealPathFromURI(data.Data);
+                path = GetRealPathFromURI(data.Data);
                 Bitmap test = BitmapHelpers.LoadAndResizeBitmap(path,width, height);
                 _imageView.SetImageBitmap(test);
             }
@@ -181,7 +184,7 @@ namespace LicencePlacte
 
         private void ExecuteTesseract(object sender, EventArgs e)
         {
-            UMat uImg = img.GetUMat(AccessType.ReadWrite);
+            UMat uImg = new UMat(path, ImreadModes.Color);
             ProcessImageMethod(uImg, 1);
         }
 
@@ -211,7 +214,7 @@ namespace LicencePlacte
             bool validValue = false;
             UMat filteredPlate = new UMat();
             StringBuilder strBuilder = new StringBuilder();
-            CvInvoke.CvtColor(img, filteredPlate, ColorConversion.Bgr2Gray);
+            CvInvoke.CvtColor(image, filteredPlate, ColorConversion.Bgr2Gray);
 
             words = _licensePlateDetector.DetectLicensePlate(
                         image,

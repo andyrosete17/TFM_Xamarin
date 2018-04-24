@@ -25,7 +25,7 @@ namespace LicensePlateRecognition
         /// <summary>
         /// The OCR engine
         /// </summary>
-        private Emgu.CV.OCR.Tesseract _ocr;
+        private Tesseract _ocr;
 
         /// <summary>
         /// Create a license plate detector
