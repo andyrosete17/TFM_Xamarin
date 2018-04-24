@@ -8,13 +8,22 @@ using Android.Graphics;
 using Android.OS;
 using Android.Provider;
 using Android.Widget;
+using Emgu.CV;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Structure;
+using Emgu.CV.Util;
 using Java.IO;
 using LicencePlacte.DTOs;
 using LicencePlacte.Enums;
 using LicencePlacte.Helper;
+using LicensePlateRecognition;
+using LicensePlateRecognition.Enums;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace LicencePlacte
@@ -26,6 +35,8 @@ namespace LicencePlacte
         /// Global variables
         /// </summary>
         ImageView _imageView;
+        private LicensePlateDetector _licensePlateDetector;
+        private Mat img;
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -37,14 +48,17 @@ namespace LicencePlacte
             Button loadPictureBtn = FindViewById<Button>(Resource.Id.LoadPictureBtn);
             loadPictureBtn.Click += LoadPicture;
 
+            Button tesseractBtn = FindViewById<Button>(Resource.Id.TesseractBtn);
+            //tesseractBtn.Click += ExecuteTesseract;
+
             if (IsThereAnAppToTakePictures())
             {
                 CreateDirectoryForPictures();
                 Button takePicture = FindViewById<Button>(Resource.Id.TakePictureBtn);
                 takePicture.Click += TakeAPicture;
             }
-
         }
+
         private void CreateDirectoryForPictures()
         {
             App._dir = new Java.IO.File(
@@ -164,6 +178,266 @@ namespace LicencePlacte
             }
             return path;
         }
+
+        private void ExecuteTesseract(object sender, EventArgs e)
+        {
+            UMat uImg = img.GetUMat(AccessType.ReadWrite);
+            ProcessImageMethod(uImg, 1);
+        }
+
+
+        private void ProcessImageMethod(UMat uImg, int ocr_Method)
+        {
+            ProcessImage(uImg, ocr_Method);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="ocr_mode"></param>
+        /// <param name="count"></param>
+        /// <param name="canny_thres">Canny threshold will take 3 values 20, 30, 40, 50</param>
+        /// <returns></returns>
+        private bool ProcessImage(IInputOutputArray image, int ocr_mode)
+        {
+            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
+            List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
+            List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
+            List<RotatedRect> licenseBoxList = new List<RotatedRect>();
+            List<string> words = new List<string>();
+            var result = false;
+            bool validValue = false;
+            UMat filteredPlate = new UMat();
+            StringBuilder strBuilder = new StringBuilder();
+            CvInvoke.CvtColor(img, filteredPlate, ColorConversion.Bgr2Gray);
+
+            words = _licensePlateDetector.DetectLicensePlate(
+                        image,
+                        licensePlateImagesList,
+                        filteredLicensePlateImagesList,
+                        licenseBoxList,
+                        ocr_mode);
+          
+
+            var validWords = new List<string>();
+            var validLicencePlates = new List<IInputOutputArray>();
+            for (int w = 0; w < words.Count; w++)
+            {
+                string replacement2 = Regex.Replace(words[w], @"\t|\n|\r", "");
+                string replacement = Regex.Replace(replacement2, "[^0-9a-zA-Z]+", "");
+                if (replacement.Length >= 6 && replacement != null)
+                {
+                    var filteredLicence = FilterLicenceSpain(replacement);
+                    if (!string.IsNullOrWhiteSpace(filteredLicence))
+                    {
+                        validValue = true;
+                        if (!validWords.Contains(replacement))
+                        {
+                            validWords.Add(filteredLicence);
+                            validLicencePlates.Add(licensePlateImagesList[w]);
+                        }
+                    }
+                }
+            }
+
+            if (validValue)
+            {
+                ShowResults(image, watch, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
+            }
+            else
+            {
+                ShowResults(image, watch, licensePlateImagesList, filteredLicensePlateImagesList, licenseBoxList, words);
+            }
+
+
+            result = true;
+            return result;
+        }
+
+        /// <summary>
+        /// Check if the license has a valid value
+        /// </summary>
+        /// <param name="replacement"></param>
+        /// <returns></returns>
+        private string FilterLicenceSpain(string replacement)
+        {
+            var result = "";
+            var mask = new List<String>();
+            var charList = replacement.ToCharArray();
+            foreach (var character in charList)
+            {
+                try
+                {
+                    int.Parse(character.ToString());
+                    mask.Add("0");
+                }
+                catch (Exception)
+                {
+                    mask.Add("1");
+                }
+            }
+
+            if (mask.Count >= 8)
+            {
+                if (string.Join("", mask).Substring(mask.Count - 6) == "100001")
+                {
+                    replacement = replacement.Substring(replacement.Length - 6);
+                    mask = GerenateMak(mask, 6, false);
+                }
+                else if (string.Join("", mask).Substring(mask.Count - 7) == "1100001"
+                        || string.Join("", mask).Substring(mask.Count - 7) == "1000011"
+                        || string.Join("", mask).Substring(mask.Count - 7) == "0000111")
+                {
+                    replacement = replacement.Substring(replacement.Length - 7);
+                    mask = GerenateMak(mask, 6, false);
+                }
+                else if (string.Join("", mask).Substring(mask.Count - 8) == "11000011"
+                      || string.Join("", mask).Substring(mask.Count - 8) == "10000011")
+                {
+                    replacement = replacement.Substring(replacement.Length - 8);
+                    mask = GerenateMak(mask, 8, false);
+                }
+                else if (string.Join("", mask).IndexOf("111") > 0)
+                {
+                    replacement = replacement.Substring(0, string.Join("", mask).IndexOf("111") + 3);
+                    mask = GerenateMak(mask, 7, true);
+                }
+            }
+
+
+            switch (mask.Count)
+            {
+                case 6:
+                    {
+                        if (string.Join("", mask) == "100001")
+                        {
+                            if (CheckProvinceEnum(replacement.Substring(0, 1)))
+                            {
+                                result = replacement;
+                            }
+                        }
+                        break;
+                    }
+                case 7:
+                    {
+                        if (string.Join("", mask) == "0000111")
+                        {
+                            result = replacement;
+                        }
+
+                        if (string.Join("", mask) == "1100001")
+                        {
+                            if (CheckProvinceEnum(replacement.Substring(0, 2)))
+                            {
+                                result = replacement;
+                            }
+                        }
+
+                        if (string.Join("", mask) == "1000011")
+                        {
+                            if (CheckProvinceEnum(replacement.Substring(0, 1)))
+                            {
+                                result = replacement;
+                            }
+                        }
+                        break;
+                    }
+                case 8:
+                    {
+                        if (string.Join("", mask) == "11000011")
+                        {
+                            if (CheckProvinceEnum(replacement.Substring(0, 2)))
+                            {
+                                result = replacement;
+                            }
+                        }
+                        else if (string.Join("", mask) == "10000011")
+                        {
+                            if (CheckProvinceEnum(replacement.Substring(0, 1)))
+                            {
+                                result = replacement;
+                            }
+                        }
+                        break;
+                    }
+                default:
+                    break;
+
+            }
+
+
+            return result;
+        }
+
+        private static List<string> GerenateMak(List<string> mask, int limit, bool direction)
+        {
+            var maskTemp = new List<String>();
+            if (direction)
+            {
+                for (int i = 0; i < limit; i++)
+                {
+                    maskTemp.Add(mask[i]);
+                }
+            }
+            else
+            {
+                for (int i = mask.Count - limit; i < mask.Count; i++)
+                {
+                    maskTemp.Add(mask[i]);
+                }
+            }
+
+            return maskTemp;
+        }
+
+        private bool CheckProvinceEnum(string provinceSufix)
+        {
+            var result = false;
+            try
+            {
+                //string province = Enum.GetName(typeof(ProvincesEnum), provinceSufix);
+                ProvincesEnum province = (ProvincesEnum)Enum.Parse(typeof(ProvincesEnum), provinceSufix);
+
+                result = true;
+            }
+            catch (Exception)
+            { }
+
+            return result;
+        }
+
+         private void ShowResults(IInputOutputArray image, Stopwatch watch, List<IInputOutputArray> licensePlateImagesList, List<IInputOutputArray> filteredLicensePlateImagesList, List<RotatedRect> licenseBoxList, List<string> words)
+        {
+            var refinnedWords = new List<string>();
+            watch.Stop(); //stop the timer
+            TextView textViewTime = new TextView(this);
+            textViewTime.Text = String.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
+
+           
+            Point startPoint = new Point(10, 10);
+         
+
+            for (int i = 0; i < licensePlateImagesList.Count; i++)
+            {
+                if (licensePlateImagesList.Count > 0)
+                {
+                    Mat dest = new Mat();
+                    CvInvoke.VConcat(licensePlateImagesList[i], filteredLicensePlateImagesList[i], dest);
+                    string replacement2 = Regex.Replace(words[i], @"\t|\n|\r", "");
+                    string replacement = Regex.Replace(replacement2, "[^0-9a-zA-Z]+", "");
+
+                    System.Drawing.PointF[] verticesF = licenseBoxList[i].GetVertices();
+                    System.Drawing.Point[] vertices = Array.ConvertAll(verticesF, System.Drawing.Point.Round);
+                    using (VectorOfPoint pts = new VectorOfPoint(vertices))
+                        CvInvoke.Polylines(image, pts, true, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
+                    refinnedWords.Add(replacement);
+                }
+            }
+        }
+
+
 
     }
 

@@ -56,8 +56,11 @@
   <ItemGroup>
     <Compile Include="DTOs\AppDTO.cs" />
     <Compile Include="Enums\ActivityEnum.cs" />
+    <Compile Include="Enums\provincesEnum.cs" />
     <Compile Include="Helper\BitmapHelpers.cs" />
     <Compile Include="MainActivity.cs" />
+    <Compile Include="OCR_Implementation\LicensePlateDetector.cs" />
+    <Compile Include="OCR_Implementation\Methods\TesseractOCR.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -85,6 +88,12 @@
     <Folder Include="Resources\mipmap-xhdpi\" />
     <Folder Include="Resources\mipmap-xxhdpi\" />
     <Folder Include="Resources\mipmap-xxxhdpi\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Emgu.CV.World\Emgu.CV.World.Android.csproj">
+      <Project>{5F102C71-65C3-4D77-AE48-29C1E75F82BE}</Project>
+      <Name>Emgu.CV.World.Android</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
