@@ -21,7 +21,9 @@ using LicensePlateRecognition.Enums;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -37,12 +39,13 @@ namespace LicencePlacte
         ImageView _imageView;
         private LicensePlateDetector _licensePlateDetector;
         private Mat img;
-        string path = "";
+        string imagePath = "";
+        static string ocrPath = "/storage/sdcard1";
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
-            _licensePlateDetector = new LicensePlateDetector("x64/");
+           // _licensePlateDetector = new LicensePlateDetector("x64/");
 
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.Main);
@@ -84,7 +87,7 @@ namespace LicencePlacte
         private void TakeAPicture(object sender, EventArgs eventArgs)
         {
             Intent intent = new Intent(MediaStore.ActionImageCapture);
-            App._file = new Java.IO.File(App._dir, String.Format("myPhoto_{0}.jpg", Guid.NewGuid()));
+            App._file = new Java.IO.File(App._dir, string.Format("myPhoto_{0}.jpg", Guid.NewGuid()));
             intent.PutExtra(MediaStore.ExtraOutput, Android.Net.Uri.FromFile(App._file));
             StartActivityForResult(intent, (int)ActivityEnum.takePicture);
         }
@@ -126,8 +129,8 @@ namespace LicencePlacte
 
                 int height = Resources.DisplayMetrics.HeightPixels;
                 int width = _imageView.Height;
-                path = GetRealPathFromURI(data.Data);
-                Bitmap test = BitmapHelpers.LoadAndResizeBitmap(path,width, height);
+                imagePath = GetRealPathFromURI(data.Data);
+                Bitmap test = BitmapHelpers.LoadAndResizeBitmap(imagePath,width, height);
                 _imageView.SetImageBitmap(test);
             }
         }
@@ -184,16 +187,70 @@ namespace LicencePlacte
 
         private void ExecuteTesseract(object sender, EventArgs e)
         {
-            UMat uImg = new UMat(path, ImreadModes.Color);
-            ProcessImageMethod(uImg, 1);
+            UMat uImg = new UMat(imagePath, ImreadModes.Color);
+            //ProcessImageMethod(uImg, 1);
+            //try
+            //{
+            //    //SetProgressMessage("Checking Tesseract Lang files...");
+            //    TesseractDownloadLangFile(ocrPath, "eng");
+            //    TesseractDownloadLangFile(ocrPath, "osd");
+            //    //SetProgressMessage("Please wait ...");
+            //}
+            //catch (WebException ex)
+            //{
+            //    //SetMessage("Unable to download tesseract language file from Internet, please check your Internet connection.");
+            //    System.Console.WriteLine(ex);
+            //    return;
+            //}
+            //catch (Exception ex)
+            //{
+            //    //SetMessage(e.Totring());
+            //    System.Console.WriteLine(ex);
+            //    return;
+            //}
+
+
+            LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
+
+
+            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
+
+            List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
+            List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
+            List<RotatedRect> licenseBoxList = new List<RotatedRect>();
+            List<string> words = detector.DetectLicensePlate(
+            uImg,
+            licensePlateImagesList,
+            filteredLicensePlateImagesList,
+            licenseBoxList,1);
+
+            watch.Stop(); //stop the timer
+
+            StringBuilder builder = new StringBuilder();
+            builder.Append(string.Format("{0} milli-seconds. ", watch.Elapsed.TotalMilliseconds));
+            foreach (string w in words)
+                builder.AppendFormat("{0} ", w);
+            //SetMessage(builder.ToString());
+
+            foreach (RotatedRect box in licenseBoxList)
+            {
+                Rectangle rect = box.MinAreaRect();
+                CvInvoke.Rectangle(uImg, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
+            }
+
+            SetImageBitmap(uImg.Bitmap);
+            uImg.Dispose();
         }
 
+        private void SetImageBitmap(Bitmap image)
+        {
+            RunOnUiThread(() => { _imageView.SetImageBitmap(image); });
+        }
 
         private void ProcessImageMethod(UMat uImg, int ocr_Method)
         {
             ProcessImage(uImg, ocr_Method);
         }
-
 
         /// <summary>
         /// 
@@ -267,7 +324,7 @@ namespace LicencePlacte
         private string FilterLicenceSpain(string replacement)
         {
             var result = "";
-            var mask = new List<String>();
+            var mask = new List<string>();
             var charList = replacement.ToCharArray();
             foreach (var character in charList)
             {
@@ -376,7 +433,7 @@ namespace LicencePlacte
 
         private static List<string> GerenateMak(List<string> mask, int limit, bool direction)
         {
-            var maskTemp = new List<String>();
+            var maskTemp = new List<string>();
             if (direction)
             {
                 for (int i = 0; i < limit; i++)
@@ -416,10 +473,10 @@ namespace LicencePlacte
             var refinnedWords = new List<string>();
             watch.Stop(); //stop the timer
             TextView textViewTime = new TextView(this);
-            textViewTime.Text = String.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
+            textViewTime.Text = string.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
 
-           
-            Point startPoint = new Point(10, 10);
+
+            Android.Graphics.Point startPoint = new Android.Graphics.Point(10, 10);
          
 
             for (int i = 0; i < licensePlateImagesList.Count; i++)
@@ -442,8 +499,34 @@ namespace LicencePlacte
 
 
 
+        private static void TesseractDownloadLangFile(string folder, string lang)
+        {
+            string subfolderName = "tessdata";
+            string folderName = System.IO.Path.Combine(folder, subfolderName);
+            ocrPath = folderName;
+            if (!Directory.Exists(folderName))
+            {
+                Directory.CreateDirectory(folderName);
+            }
+            string dest = System.IO.Path.Combine(folderName, string.Format("{0}.traineddata", lang));
+            if (!System.IO.File.Exists(dest))
+                using (WebClient webclient = new WebClient())
+                {
+                    string source =
+                        string.Format("https://github.com/tesseract-ocr/tessdata/blob/4592b8d453889181e01982d22328b5846765eaad/{0}.traineddata?raw=true", lang);
+
+                    System.Console.WriteLine(string.Format("Downloading file from '{0}' to '{1}'", source, dest));
+                    using (var client = new WebClient())
+                    {
+                        client.DownloadFileAsync(new Uri(source), dest);
+                    }
+                    System.Console.WriteLine(string.Format("Download completed"));
+                }
+        }
     }
 
-
 }
+
+
+
 
