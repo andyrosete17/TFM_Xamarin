@@ -45,7 +45,8 @@ namespace LicencePlacte
         {
             base.OnCreate(savedInstanceState);
 
-           // _licensePlateDetector = new LicensePlateDetector("x64/");
+            // _licensePlateDetector = new LicensePlateDetector("x64/");
+            _licensePlateDetector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
 
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.Main);
@@ -188,58 +189,39 @@ namespace LicencePlacte
         private void ExecuteTesseract(object sender, EventArgs e)
         {
             UMat uImg = new UMat(imagePath, ImreadModes.Color);
-            //ProcessImageMethod(uImg, 1);
-            //try
+
+            ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
+
+           // LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
+
+
+            //Stopwatch watch = Stopwatch.StartNew(); // time the detection process
+
+            //List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
+            //List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
+            //List<RotatedRect> licenseBoxList = new List<RotatedRect>();
+            //List<string> words = detector.DetectLicensePlate(
+            //uImg,
+            //licensePlateImagesList,
+            //filteredLicensePlateImagesList,
+            //licenseBoxList,1);
+
+            //watch.Stop(); //stop the timer
+
+            //StringBuilder builder = new StringBuilder();
+            //builder.Append(string.Format("{0} milli-seconds. ", watch.Elapsed.TotalMilliseconds));
+            //foreach (string w in words)
+            //    builder.AppendFormat("{0} ", w);
+            ////SetMessage(builder.ToString());
+
+            //foreach (RotatedRect box in licenseBoxList)
             //{
-            //    //SetProgressMessage("Checking Tesseract Lang files...");
-            //    TesseractDownloadLangFile(ocrPath, "eng");
-            //    TesseractDownloadLangFile(ocrPath, "osd");
-            //    //SetProgressMessage("Please wait ...");
-            //}
-            //catch (WebException ex)
-            //{
-            //    //SetMessage("Unable to download tesseract language file from Internet, please check your Internet connection.");
-            //    System.Console.WriteLine(ex);
-            //    return;
-            //}
-            //catch (Exception ex)
-            //{
-            //    //SetMessage(e.Totring());
-            //    System.Console.WriteLine(ex);
-            //    return;
+            //    Rectangle rect = box.MinAreaRect();
+            //    CvInvoke.Rectangle(uImg, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
             //}
 
-
-            LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
-
-
-            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
-
-            List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
-            List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
-            List<RotatedRect> licenseBoxList = new List<RotatedRect>();
-            List<string> words = detector.DetectLicensePlate(
-            uImg,
-            licensePlateImagesList,
-            filteredLicensePlateImagesList,
-            licenseBoxList,1);
-
-            watch.Stop(); //stop the timer
-
-            StringBuilder builder = new StringBuilder();
-            builder.Append(string.Format("{0} milli-seconds. ", watch.Elapsed.TotalMilliseconds));
-            foreach (string w in words)
-                builder.AppendFormat("{0} ", w);
-            //SetMessage(builder.ToString());
-
-            foreach (RotatedRect box in licenseBoxList)
-            {
-                Rectangle rect = box.MinAreaRect();
-                CvInvoke.Rectangle(uImg, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
-            }
-
-            SetImageBitmap(uImg.Bitmap);
-            uImg.Dispose();
+            //SetImageBitmap(uImg.Bitmap);
+            //uImg.Dispose();
         }
 
         private void SetImageBitmap(Bitmap image)
@@ -273,6 +255,7 @@ namespace LicencePlacte
             StringBuilder strBuilder = new StringBuilder();
             CvInvoke.CvtColor(image, filteredPlate, ColorConversion.Bgr2Gray);
 
+            UMat uImg = (UMat)image;
             words = _licensePlateDetector.DetectLicensePlate(
                         image,
                         licensePlateImagesList,
@@ -311,6 +294,8 @@ namespace LicencePlacte
                 ShowResults(image, watch, licensePlateImagesList, filteredLicensePlateImagesList, licenseBoxList, words);
             }
 
+            SetImageBitmap(uImg.Bitmap);
+            uImg.Dispose();
 
             result = true;
             return result;
@@ -468,7 +453,12 @@ namespace LicencePlacte
             return result;
         }
 
-         private void ShowResults(IInputOutputArray image, Stopwatch watch, List<IInputOutputArray> licensePlateImagesList, List<IInputOutputArray> filteredLicensePlateImagesList, List<RotatedRect> licenseBoxList, List<string> words)
+         private void ShowResults(IInputOutputArray image, 
+                                    Stopwatch watch, 
+                                    List<IInputOutputArray> licensePlateImagesList, 
+                                    List<IInputOutputArray> filteredLicensePlateImagesList, 
+                                    List<RotatedRect> licenseBoxList, 
+                                    List<string> words)
         {
             var refinnedWords = new List<string>();
             watch.Stop(); //stop the timer
@@ -483,15 +473,12 @@ namespace LicencePlacte
             {
                 if (licensePlateImagesList.Count > 0)
                 {
-                    Mat dest = new Mat();
-                    CvInvoke.VConcat(licensePlateImagesList[i], filteredLicensePlateImagesList[i], dest);
+                   
                     string replacement2 = Regex.Replace(words[i], @"\t|\n|\r", "");
                     string replacement = Regex.Replace(replacement2, "[^0-9a-zA-Z]+", "");
 
-                    System.Drawing.PointF[] verticesF = licenseBoxList[i].GetVertices();
-                    System.Drawing.Point[] vertices = Array.ConvertAll(verticesF, System.Drawing.Point.Round);
-                    using (VectorOfPoint pts = new VectorOfPoint(vertices))
-                        CvInvoke.Polylines(image, pts, true, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
+                    Rectangle rect = licenseBoxList[i].MinAreaRect();
+                    CvInvoke.Rectangle(image, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
                     refinnedWords.Add(replacement);
                 }
             }
