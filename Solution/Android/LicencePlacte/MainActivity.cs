@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -38,7 +39,7 @@ namespace LicencePlacte
         /// </summary>
         ImageView _imageView;
         private LicensePlateDetector _licensePlateDetector;
-        private Mat img;
+        private ListView myListView;
         string imagePath = "";
         static string ocrPath = "/storage/sdcard1";
         protected override void OnCreate(Bundle savedInstanceState)
@@ -114,6 +115,8 @@ namespace LicencePlacte
                 case 1:
                     //Load from gallery
                     LoadImageFromGallery(requestCode, resultCode, data);
+                    var temp = new List<string>();
+                    ShowLicencePlateOnScreen(temp);
                     break;
 
                 default:
@@ -121,7 +124,7 @@ namespace LicencePlacte
             }
         }
 
-        private  void LoadImageFromGallery(int requestCode, Result resultCode, Intent data)
+        private void LoadImageFromGallery(int requestCode, Result resultCode, Intent data)
         {
             if ((resultCode == Result.Ok) && (data != null))
             {
@@ -131,7 +134,7 @@ namespace LicencePlacte
                 int height = Resources.DisplayMetrics.HeightPixels;
                 int width = _imageView.Height;
                 imagePath = GetRealPathFromURI(data.Data);
-                Bitmap test = BitmapHelpers.LoadAndResizeBitmap(imagePath,width, height);
+                Bitmap test = BitmapHelpers.LoadAndResizeBitmap(imagePath, width, height);
                 _imageView.SetImageBitmap(test);
             }
         }
@@ -192,7 +195,7 @@ namespace LicencePlacte
 
             ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
 
-           // LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
+            // LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
 
 
             //Stopwatch watch = Stopwatch.StartNew(); // time the detection process
@@ -250,7 +253,6 @@ namespace LicencePlacte
             List<RotatedRect> licenseBoxList = new List<RotatedRect>();
             List<string> words = new List<string>();
             var result = false;
-            bool validValue = false;
             UMat filteredPlate = new UMat();
             StringBuilder strBuilder = new StringBuilder();
             CvInvoke.CvtColor(image, filteredPlate, ColorConversion.Bgr2Gray);
@@ -262,7 +264,7 @@ namespace LicencePlacte
                         filteredLicensePlateImagesList,
                         licenseBoxList,
                         ocr_mode);
-          
+
 
             var validWords = new List<string>();
             var validLicencePlates = new List<IInputOutputArray>();
@@ -275,7 +277,6 @@ namespace LicencePlacte
                     var filteredLicence = FilterLicenceSpain(replacement);
                     if (!string.IsNullOrWhiteSpace(filteredLicence))
                     {
-                        validValue = true;
                         if (!validWords.Contains(replacement))
                         {
                             validWords.Add(filteredLicence);
@@ -285,14 +286,7 @@ namespace LicencePlacte
                 }
             }
 
-            if (validValue)
-            {
-                ShowResults(image, watch, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
-            }
-            else
-            {
-                ShowResults(image, watch, licensePlateImagesList, filteredLicensePlateImagesList, licenseBoxList, words);
-            }
+            ShowResults(image, watch, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
 
             SetImageBitmap(uImg.Bitmap);
             uImg.Dispose();
@@ -453,38 +447,50 @@ namespace LicencePlacte
             return result;
         }
 
-         private void ShowResults(IInputOutputArray image, 
-                                    Stopwatch watch, 
-                                    List<IInputOutputArray> licensePlateImagesList, 
-                                    List<IInputOutputArray> filteredLicensePlateImagesList, 
-                                    List<RotatedRect> licenseBoxList, 
-                                    List<string> words)
+        private void ShowResults(IInputOutputArray image,
+                                   Stopwatch watch,
+                                   List<IInputOutputArray> licensePlateImagesList,
+                                   List<IInputOutputArray> filteredLicensePlateImagesList,
+                                   List<RotatedRect> licenseBoxList,
+                                   List<string> words)
         {
             var refinnedWords = new List<string>();
             watch.Stop(); //stop the timer
             TextView textViewTime = new TextView(this);
             textViewTime.Text = string.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
 
-
             Android.Graphics.Point startPoint = new Android.Graphics.Point(10, 10);
-         
 
-            for (int i = 0; i < licensePlateImagesList.Count; i++)
+            if (words.Any() && words.Count != 0 )
             {
-                if (licensePlateImagesList.Count > 0)
+                for (int i = 0; i < licensePlateImagesList.Count; i++)
                 {
-                   
-                    string replacement2 = Regex.Replace(words[i], @"\t|\n|\r", "");
-                    string replacement = Regex.Replace(replacement2, "[^0-9a-zA-Z]+", "");
+                    if (licensePlateImagesList.Count > 0)
+                    {
+                        string replacement2 = Regex.Replace(words[i], @"\t|\n|\r", "");
+                        string replacement = Regex.Replace(replacement2, "[^0-9a-zA-Z]+", "");
 
-                    Rectangle rect = licenseBoxList[i].MinAreaRect();
-                    CvInvoke.Rectangle(image, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
-                    refinnedWords.Add(replacement);
+                        Rectangle rect = licenseBoxList[i].MinAreaRect();
+                        CvInvoke.Rectangle(image, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
+                        refinnedWords.Add(replacement);
+                    }
                 }
             }
+            else
+            {
+                refinnedWords.Add("Not licence was found");
+            }
+                ShowLicencePlateOnScreen(refinnedWords);
         }
 
 
+        private void ShowLicencePlateOnScreen(List<string> refinnedWords)
+        {
+
+            myListView = FindViewById<ListView>(Resource.Id.myListView);
+            ArrayAdapter<string> adapter = new ArrayAdapter<string>(this, Android.Resource.Layout.SimpleListItem1, refinnedWords);
+            myListView.Adapter = adapter;
+        }
 
         private static void TesseractDownloadLangFile(string folder, string lang)
         {

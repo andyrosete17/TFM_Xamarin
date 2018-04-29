@@ -29,10 +29,15 @@
     <ImageView
         android:src="@android:drawable/ic_menu_gallery"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="306dp"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         android:adjustViewBounds="true"
         android:id="@+id/imageView1"
         android:layout_marginTop="55dp" />
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="224.5dp"
+        android:id="@+id/myListView"
+        android:layout_marginTop="350dp" />
 </RelativeLayout>
