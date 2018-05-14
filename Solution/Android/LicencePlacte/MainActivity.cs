@@ -330,7 +330,7 @@ namespace LicencePlacte
                         || string.Join("", mask).Substring(mask.Count - 7) == "0000111")
                 {
                     replacement = replacement.Substring(replacement.Length - 7);
-                    mask = GerenateMak(mask, 6, false);
+                    mask = GerenateMak(mask, 7, false);
                 }
                 else if (string.Join("", mask).Substring(mask.Count - 8) == "11000011"
                       || string.Join("", mask).Substring(mask.Count - 8) == "10000011")
