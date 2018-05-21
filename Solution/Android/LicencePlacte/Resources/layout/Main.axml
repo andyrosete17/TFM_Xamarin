@@ -26,6 +26,14 @@
         android:padding="10dip"
         android:layout_marginLeft="380px"
         android:id="@+id/TesseractBtn" />
+    <Button
+        android:text="Temp"
+        android:layout_width="200px"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:padding="10dip"
+        android:layout_marginLeft="580px"
+        android:id="@+id/TempBtn" />
     <ImageView
         android:src="@android:drawable/ic_menu_gallery"
         android:layout_width="match_parent"
@@ -35,6 +43,12 @@
         android:adjustViewBounds="true"
         android:id="@+id/imageView1"
         android:layout_marginTop="55dp" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="224.5dp"
+        android:id="@+id/tempText"
+        android:layout_marginTop="350dp"
+        android:text="Prueba" />
     <ListView
         android:layout_width="match_parent"
         android:layout_height="224.5dp"

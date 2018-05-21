@@ -3,7 +3,6 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.Content.Res;
-using Android.Database;
 using Android.Graphics;
 using Android.OS;
 using Android.Provider;
@@ -11,8 +10,6 @@ using Android.Widget;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using Emgu.CV.Util;
-using Java.IO;
 using LicencePlacte.DTOs;
 using LicencePlacte.Enums;
 using LicencePlacte.Helper;
@@ -27,12 +24,13 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Android.Hardware;
+
 
 namespace LicencePlacte
 {
     [Activity(Label = "LicencePlate", MainLauncher = true)]
-    public class MainActivity : Activity
+    public class MainActivity : Activity, ISensorEventListener
     {
         /// <summary>
         /// Global variables
@@ -42,6 +40,13 @@ namespace LicencePlacte
         private ListView myListView;
         string imagePath = "";
         static string ocrPath = "/storage/sdcard1";
+
+        static readonly object _syncLock = new object();
+        SensorManager _sensorManager;
+        TextView _sensorTextView;
+        string tempTemp;
+
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -59,12 +64,27 @@ namespace LicencePlacte
             Button tesseractBtn = FindViewById<Button>(Resource.Id.TesseractBtn);
             tesseractBtn.Click += ExecuteTesseract;
 
+            Button tempBtn = FindViewById<Button>(Resource.Id.TempBtn);
+
+            tempBtn.Click += CheckTemp;
+
             if (IsThereAnAppToTakePictures())
             {
                 CreateDirectoryForPictures();
                 Button takePicture = FindViewById<Button>(Resource.Id.TakePictureBtn);
                 takePicture.Click += TakeAPicture;
             }
+
+            _sensorManager = (SensorManager)GetSystemService(SensorService);
+            _sensorTextView = FindViewById<TextView>(Resource.Id.tempText);
+        }
+
+        protected override void OnResume()
+        {
+            base.OnResume();
+            _sensorManager.RegisterListener(this,
+                                            _sensorManager.GetDefaultSensor(SensorType.Accelerometer),
+                                            SensorDelay.Ui);
         }
 
         private void CreateDirectoryForPictures()
@@ -194,37 +214,11 @@ namespace LicencePlacte
             UMat uImg = new UMat(imagePath, ImreadModes.Color);
 
             ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
+        }
 
-            // LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
-
-
-            //Stopwatch watch = Stopwatch.StartNew(); // time the detection process
-
-            //List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
-            //List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
-            //List<RotatedRect> licenseBoxList = new List<RotatedRect>();
-            //List<string> words = detector.DetectLicensePlate(
-            //uImg,
-            //licensePlateImagesList,
-            //filteredLicensePlateImagesList,
-            //licenseBoxList,1);
-
-            //watch.Stop(); //stop the timer
-
-            //StringBuilder builder = new StringBuilder();
-            //builder.Append(string.Format("{0} milli-seconds. ", watch.Elapsed.TotalMilliseconds));
-            //foreach (string w in words)
-            //    builder.AppendFormat("{0} ", w);
-            ////SetMessage(builder.ToString());
-
-            //foreach (RotatedRect box in licenseBoxList)
-            //{
-            //    Rectangle rect = box.MinAreaRect();
-            //    CvInvoke.Rectangle(uImg, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
-            //}
-
-            //SetImageBitmap(uImg.Bitmap);
-            //uImg.Dispose();
+        private void CheckTemp(object sender, EventArgs e)
+        {
+          
         }
 
         private void SetImageBitmap(Bitmap image)
@@ -558,6 +552,28 @@ namespace LicencePlacte
                     }
                     System.Console.WriteLine(string.Format("Download completed"));
                 }
+        }
+
+        public void GetTemp(SensorEvent e)
+        {
+            lock (_syncLock)
+            {
+                _sensorTextView.Text = tempTemp;
+            }
+
+        }
+        public void OnAccuracyChanged(Sensor sensor, SensorStatus accuracy)
+        {
+            // We don't want to do anything here.
+        }
+
+
+        public void OnSensorChanged(SensorEvent e)
+        {
+            lock (_syncLock)
+            {
+                tempTemp = string.Format("x={0:f}", e.Values[0]);
+            }
         }
     }
 
