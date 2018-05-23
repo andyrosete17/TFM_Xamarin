@@ -5,8 +5,10 @@ using Android.Content.PM;
 using Android.Content.Res;
 using Android.Database;
 using Android.Graphics;
+using Android.Hardware;
 using Android.OS;
 using Android.Provider;
+using Android.Runtime;
 using Android.Widget;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
@@ -32,7 +34,7 @@ using System.Threading.Tasks;
 namespace LicencePlacte
 {
     [Activity(Label = "LicencePlate", MainLauncher = true)]
-    public class MainActivity : Activity
+    public class MainActivity : Activity, ISensorEventListener
     {
         /// <summary>
         /// Global variables
@@ -191,40 +193,22 @@ namespace LicencePlacte
 
         private void ExecuteTesseract(object sender, EventArgs e)
         {
+            var manager = SensorManager.FromContext(this);
+            var type = SensorType.Accelerometer;
+            var accelerometer = manager.GetDefaultSensor(type);
+
+            manager.RegisterListener(
+                    this, accelerometer, SensorDelay.Fastest);
+
+            if (accelerometer == null)
+            {
+                // handle no acceleromenter
+            }
             UMat uImg = new UMat(imagePath, ImreadModes.Color);
+          
 
             ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
-
-            // LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
-
-
-            //Stopwatch watch = Stopwatch.StartNew(); // time the detection process
-
-            //List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
-            //List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
-            //List<RotatedRect> licenseBoxList = new List<RotatedRect>();
-            //List<string> words = detector.DetectLicensePlate(
-            //uImg,
-            //licensePlateImagesList,
-            //filteredLicensePlateImagesList,
-            //licenseBoxList,1);
-
-            //watch.Stop(); //stop the timer
-
-            //StringBuilder builder = new StringBuilder();
-            //builder.Append(string.Format("{0} milli-seconds. ", watch.Elapsed.TotalMilliseconds));
-            //foreach (string w in words)
-            //    builder.AppendFormat("{0} ", w);
-            ////SetMessage(builder.ToString());
-
-            //foreach (RotatedRect box in licenseBoxList)
-            //{
-            //    Rectangle rect = box.MinAreaRect();
-            //    CvInvoke.Rectangle(uImg, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
-            //}
-
-            //SetImageBitmap(uImg.Bitmap);
-            //uImg.Dispose();
+            manager.UnregisterListener(this);
         }
 
         private void SetImageBitmap(Bitmap image)
@@ -558,6 +542,16 @@ namespace LicencePlacte
                     }
                     System.Console.WriteLine(string.Format("Download completed"));
                 }
+        }
+
+        public void OnAccuracyChanged(Sensor sensor, [GeneratedEnum] SensorStatus accuracy)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void OnSensorChanged(SensorEvent e)
+        {
+            throw new NotImplementedException();
         }
     }
 
