@@ -9,7 +9,7 @@
         public int CpuIRQ { get; set; }
         public float BatteryTemp { get; set; }
         public int BatteryLevel { get; set; }
-        public int TimeSpend { get; set; }
+        public string TimeSpend { get; set; }
 
     }
 }

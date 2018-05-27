@@ -20,8 +20,7 @@ namespace LicencePlacte.Helper
         {
             GetCPUDetails();
             GetCpuUsageStatistic();
-            GetBatteryDetails();
-            Toast.MakeText(Application.Context, result, ToastLength.Long).Show();
+            GetBatteryDetails();            
             return resultStatistic;
             
         }

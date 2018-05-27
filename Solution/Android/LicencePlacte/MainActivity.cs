@@ -215,9 +215,12 @@ namespace LicencePlacte
             var previous = new StatisticalDTO();
             var after = new StatisticalDTO();
             previous = StatisticsDetails.GetDetailsResult();
+            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
             UMat uImg = new UMat(imagePath, ImreadModes.Color);
             ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
             after =  StatisticsDetails.GetDetailsResult();
+            watch.Stop(); //stop the timer
+            after.TimeSpend = watch.Elapsed.TotalMilliseconds.ToString();
 
             ShowStatisticalResult(previous, after);
         }
@@ -225,15 +228,15 @@ namespace LicencePlacte
         private void ShowStatisticalResult(StatisticalDTO previous, StatisticalDTO after)
         {
             var result = "Results\n" 
-               + "CpuTemp = " + previous.CpuTemp + " + " + (after.CpuTemp - previous.CpuTemp).ToString() + "oC\n"
+               + "CpuTemp = " + Math.Round(previous.CpuTemp, 2) + " + " + Math.Round((after.CpuTemp - previous.CpuTemp), 2).ToString() + "oC\n"
                + "CpuUser = " + previous.CpuUser + " + " + (after.CpuUser - previous.CpuUser).ToString() + "%\n"
                + "CpuSystem = " + previous.CpuSystem + " + " + (after.CpuSystem - previous.CpuSystem).ToString() + "%\n"
                + "CpuIOW = " + previous.CpuIOW + " + " + (after.CpuIOW - previous.CpuIOW).ToString() + "%\n"
                + "CpuIRQ = " + previous.CpuIRQ + " + " + (after.CpuIRQ - previous.CpuIRQ).ToString() + "%\n"
                + "BatteryTemp = " + previous.BatteryTemp + " + " + (after.BatteryTemp - previous.BatteryTemp).ToString() + "oC\n"
-               + "BatteryLevel = " + previous.BatteryLevel + " + " + (after.BatteryLevel - previous.BatteryLevel).ToString() + "ms\n"
-               + "TimeSpend = " + previous.BatteryTemp + "\n";
-
+               + "BatteryLevel = " + previous.BatteryLevel + " + " + (after.BatteryLevel - previous.BatteryLevel).ToString() + "%\n"
+               + "TimeSpend = " + after.TimeSpend + "ms\n";
+            Toast.MakeText(Application.Context, result, ToastLength.Long).Show();
         }
 
         private void SetImageBitmap(Bitmap image)
@@ -256,7 +259,7 @@ namespace LicencePlacte
         /// <returns></returns>
         private bool ProcessImage(IInputOutputArray image, int ocr_mode)
         {
-            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
+           
             List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
             List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
             List<RotatedRect> licenseBoxList = new List<RotatedRect>();
@@ -295,7 +298,7 @@ namespace LicencePlacte
                 }
             }
 
-            ShowResults(image, watch, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
+            ShowResults(image, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
 
             SetImageBitmap(uImg.Bitmap);
             uImg.Dispose();
@@ -499,18 +502,14 @@ namespace LicencePlacte
             return result;
         }
 
-        private void ShowResults(IInputOutputArray image,
-                                   Stopwatch watch,
+        private void ShowResults(IInputOutputArray image,                 
                                    List<IInputOutputArray> licensePlateImagesList,
                                    List<IInputOutputArray> filteredLicensePlateImagesList,
                                    List<RotatedRect> licenseBoxList,
                                    List<string> words)
         {
             var refinnedWords = new List<string>();
-            watch.Stop(); //stop the timer
            
-            //Set timer variable
-            timerTag = string.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
 
             Android.Graphics.Point startPoint = new Android.Graphics.Point(10, 10);
 
