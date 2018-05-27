@@ -5,8 +5,10 @@ using Android.Content.PM;
 using Android.Content.Res;
 using Android.Database;
 using Android.Graphics;
+using Android.Hardware;
 using Android.OS;
 using Android.Provider;
+using Android.Runtime;
 using Android.Widget;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
@@ -32,7 +34,7 @@ using System.Threading.Tasks;
 namespace LicencePlacte
 {
     [Activity(Label = "LicencePlate", MainLauncher = true)]
-    public class MainActivity : Activity
+    public class MainActivity : Activity, ISensorEventListener
     {
         /// <summary>
         /// Global variables
@@ -40,8 +42,14 @@ namespace LicencePlacte
         ImageView _imageView;
         private LicensePlateDetector _licensePlateDetector;
         private ListView myListView;
-        string imagePath = "";
-        static string ocrPath = "/storage/sdcard1";
+        string imagePath = "";        
+        static string ocrPath = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+        string timerTag = "";
+
+
+        SensorManager _sensorManager;
+        BatteryManager battery;
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -65,7 +73,20 @@ namespace LicencePlacte
                 Button takePicture = FindViewById<Button>(Resource.Id.TakePictureBtn);
                 takePicture.Click += TakeAPicture;
             }
+
+            _sensorManager = (SensorManager)GetSystemService(SensorService);          
+            battery = (BatteryManager)GetSystemService(BatteryService);
         }
+
+        protected override void OnResume()
+        {
+            base.OnResume();
+            _sensorManager.RegisterListener(this,
+                    _sensorManager.GetDefaultSensor(SensorType.AmbientTemperature),
+                    SensorDelay.Normal);
+            
+        }
+
 
         private void CreateDirectoryForPictures()
         {
@@ -191,40 +212,31 @@ namespace LicencePlacte
 
         private void ExecuteTesseract(object sender, EventArgs e)
         {
+            var previous = new StatisticalDTO();
+            var after = new StatisticalDTO();
+            previous = StatisticsDetails.GetDetailsResult();
+            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
             UMat uImg = new UMat(imagePath, ImreadModes.Color);
-
             ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
+            after =  StatisticsDetails.GetDetailsResult();
+            watch.Stop(); //stop the timer
+            after.TimeSpend = watch.Elapsed.TotalMilliseconds.ToString();
 
-            // LicensePlateDetector detector = new LicensePlateDetector(ocrPath + System.IO.Path.DirectorySeparatorChar);
+            ShowStatisticalResult(previous, after);
+        }
 
-
-            //Stopwatch watch = Stopwatch.StartNew(); // time the detection process
-
-            //List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
-            //List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
-            //List<RotatedRect> licenseBoxList = new List<RotatedRect>();
-            //List<string> words = detector.DetectLicensePlate(
-            //uImg,
-            //licensePlateImagesList,
-            //filteredLicensePlateImagesList,
-            //licenseBoxList,1);
-
-            //watch.Stop(); //stop the timer
-
-            //StringBuilder builder = new StringBuilder();
-            //builder.Append(string.Format("{0} milli-seconds. ", watch.Elapsed.TotalMilliseconds));
-            //foreach (string w in words)
-            //    builder.AppendFormat("{0} ", w);
-            ////SetMessage(builder.ToString());
-
-            //foreach (RotatedRect box in licenseBoxList)
-            //{
-            //    Rectangle rect = box.MinAreaRect();
-            //    CvInvoke.Rectangle(uImg, rect, new Bgr(System.Drawing.Color.Red).MCvScalar, 2);
-            //}
-
-            //SetImageBitmap(uImg.Bitmap);
-            //uImg.Dispose();
+        private void ShowStatisticalResult(StatisticalDTO previous, StatisticalDTO after)
+        {
+            var result = "Results\n" 
+               + "CpuTemp = " + Math.Round(previous.CpuTemp, 2) + " + " + Math.Round((after.CpuTemp - previous.CpuTemp), 2).ToString() + "oC\n"
+               + "CpuUser = " + previous.CpuUser + " + " + (after.CpuUser - previous.CpuUser).ToString() + "%\n"
+               + "CpuSystem = " + previous.CpuSystem + " + " + (after.CpuSystem - previous.CpuSystem).ToString() + "%\n"
+               + "CpuIOW = " + previous.CpuIOW + " + " + (after.CpuIOW - previous.CpuIOW).ToString() + "%\n"
+               + "CpuIRQ = " + previous.CpuIRQ + " + " + (after.CpuIRQ - previous.CpuIRQ).ToString() + "%\n"
+               + "BatteryTemp = " + previous.BatteryTemp + " + " + (after.BatteryTemp - previous.BatteryTemp).ToString() + "oC\n"
+               + "BatteryLevel = " + previous.BatteryLevel + " + " + (after.BatteryLevel - previous.BatteryLevel).ToString() + "%\n"
+               + "TimeSpend = " + after.TimeSpend + "ms\n";
+            Toast.MakeText(Application.Context, result, ToastLength.Long).Show();
         }
 
         private void SetImageBitmap(Bitmap image)
@@ -247,7 +259,7 @@ namespace LicencePlacte
         /// <returns></returns>
         private bool ProcessImage(IInputOutputArray image, int ocr_mode)
         {
-            Stopwatch watch = Stopwatch.StartNew(); // time the detection process
+           
             List<IInputOutputArray> licensePlateImagesList = new List<IInputOutputArray>();
             List<IInputOutputArray> filteredLicensePlateImagesList = new List<IInputOutputArray>();
             List<RotatedRect> licenseBoxList = new List<RotatedRect>();
@@ -286,7 +298,7 @@ namespace LicencePlacte
                 }
             }
 
-            ShowResults(image, watch, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
+            ShowResults(image, validLicencePlates, filteredLicensePlateImagesList, licenseBoxList, validWords);
 
             SetImageBitmap(uImg.Bitmap);
             uImg.Dispose();
@@ -318,31 +330,63 @@ namespace LicencePlacte
                 }
             }
 
+            if (string.Join("", mask).IndexOf("111") > 0 && mask.Count >= 8)
+            {
+                replacement = replacement.Substring(0, string.Join("", mask).IndexOf("111") + 3);
+                mask = GerenateMask(mask, 8, true);
+            }
+
             if (mask.Count >= 8)
             {
                 if (string.Join("", mask).Substring(mask.Count - 6) == "100001")
                 {
                     replacement = replacement.Substring(replacement.Length - 6);
-                    mask = GerenateMak(mask, 6, false);
+                    mask = GerenateMask(mask, 6, false);
+                }
+                else if (string.Join("", mask).IndexOf("100001") > 0)
+                {
+                    replacement = replacement.Substring(string.Join("", mask).IndexOf("100001"), 6);
+                    mask = GerenateMask(mask, 6, false, "100001");
                 }
                 else if (string.Join("", mask).Substring(mask.Count - 7) == "1100001"
                         || string.Join("", mask).Substring(mask.Count - 7) == "1000011"
                         || string.Join("", mask).Substring(mask.Count - 7) == "0000111")
                 {
                     replacement = replacement.Substring(replacement.Length - 7);
-                    mask = GerenateMak(mask, 6, false);
+                    mask = GerenateMask(mask, 7, false);
+                }
+                else if (string.Join("", mask).IndexOf("1100001") > 0)
+                {
+                    replacement = replacement.Substring(string.Join("", mask).IndexOf("1100001"), 7);
+                    mask = GerenateMask(mask, 7, false, "1100001");
+                }
+                else if (string.Join("", mask).IndexOf("1000011") > 0)
+                {
+                    replacement = replacement.Substring(string.Join("", mask).IndexOf("1000011"), 7);
+                    mask = GerenateMask(mask, 7, false, "1000011");
+                }
+                else if (string.Join("", mask).IndexOf("0000111") > 0)
+                {
+                    replacement = replacement.Substring(string.Join("", mask).IndexOf("0000111"), 7);
+                    mask = GerenateMask(mask, 7, false, "0000111");
                 }
                 else if (string.Join("", mask).Substring(mask.Count - 8) == "11000011"
                       || string.Join("", mask).Substring(mask.Count - 8) == "10000011")
                 {
                     replacement = replacement.Substring(replacement.Length - 8);
-                    mask = GerenateMak(mask, 8, false);
+                    mask = GerenateMask(mask, 8, false);
                 }
-                else if (string.Join("", mask).IndexOf("111") > 0)
+                else if (string.Join("", mask).IndexOf("11000011") > 0)
                 {
-                    replacement = replacement.Substring(0, string.Join("", mask).IndexOf("111") + 3);
-                    mask = GerenateMak(mask, 7, true);
+                    replacement = replacement.Substring(string.Join("", mask).IndexOf("11000011"), 8);
+                    mask = GerenateMask(mask, 8, false, "11000011");
                 }
+                else if (string.Join("", mask).IndexOf("10000011") > 0)
+                {
+                    replacement = replacement.Substring(string.Join("", mask).IndexOf("10000011"), 8);
+                    mask = GerenateMask(mask, 8, false, "10000011");
+                }
+
             }
 
 
@@ -410,21 +454,32 @@ namespace LicencePlacte
             return result;
         }
 
-        private static List<string> GerenateMak(List<string> mask, int limit, bool direction)
+        private static List<string> GerenateMask(List<string> mask, int limit, bool direction, string maskForce = "")
         {
-            var maskTemp = new List<string>();
-            if (direction)
+            var maskTemp = new List<String>();
+            if (!string.IsNullOrWhiteSpace(maskForce))
             {
-                for (int i = 0; i < limit; i++)
+                var maskForceCharArray = maskForce.ToCharArray();
+                foreach (var item in maskForceCharArray)
                 {
-                    maskTemp.Add(mask[i]);
+                    maskTemp.Add(item.ToString());
                 }
             }
             else
             {
-                for (int i = mask.Count - limit; i < mask.Count; i++)
+                if (direction)
                 {
-                    maskTemp.Add(mask[i]);
+                    for (int i = 0; i < limit; i++)
+                    {
+                        maskTemp.Add(mask[i]);
+                    }
+                }
+                else
+                {
+                    for (int i = mask.Count - limit; i < mask.Count; i++)
+                    {
+                        maskTemp.Add(mask[i]);
+                    }
                 }
             }
 
@@ -447,21 +502,18 @@ namespace LicencePlacte
             return result;
         }
 
-        private void ShowResults(IInputOutputArray image,
-                                   Stopwatch watch,
+        private void ShowResults(IInputOutputArray image,                 
                                    List<IInputOutputArray> licensePlateImagesList,
                                    List<IInputOutputArray> filteredLicensePlateImagesList,
                                    List<RotatedRect> licenseBoxList,
                                    List<string> words)
         {
             var refinnedWords = new List<string>();
-            watch.Stop(); //stop the timer
-            TextView textViewTime = new TextView(this);
-            textViewTime.Text = string.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
+           
 
             Android.Graphics.Point startPoint = new Android.Graphics.Point(10, 10);
 
-            if (words.Any() && words.Count != 0 )
+            if (words.Any() && words.Count != 0)
             {
                 for (int i = 0; i < licensePlateImagesList.Count; i++)
                 {
@@ -480,7 +532,7 @@ namespace LicencePlacte
             {
                 refinnedWords.Add("Not licence was found");
             }
-                ShowLicencePlateOnScreen(refinnedWords);
+            ShowLicencePlateOnScreen(refinnedWords);
         }
 
 
@@ -515,6 +567,17 @@ namespace LicencePlacte
                     }
                     System.Console.WriteLine(string.Format("Download completed"));
                 }
+        }
+
+        public void OnAccuracyChanged(Sensor sensor, [GeneratedEnum] SensorStatus accuracy)
+        {
+            
+            StatisticsDetails.GetDetailsResult();
+        }
+
+        public void OnSensorChanged(SensorEvent e)
+        {
+            StatisticsDetails.GetDetailsResult();
         }
     }
 

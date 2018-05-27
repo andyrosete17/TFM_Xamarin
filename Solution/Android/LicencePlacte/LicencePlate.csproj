@@ -60,10 +60,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DTOs\AppDTO.cs" />
+    <Compile Include="DTOs\StatisticalDTO.cs" />
     <Compile Include="Enums\ActivityEnum.cs" />
     <Compile Include="Enums\OCRMethodEnum.cs" />
     <Compile Include="Enums\provincesEnum.cs" />
     <Compile Include="Helper\BitmapHelpers.cs" />
+    <Compile Include="Helper\StatisticsDetails.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="OCR_Implementation\LicensePlateDetector.cs" />
     <Compile Include="OCR_Implementation\Methods\TesseractOCR.cs" />
