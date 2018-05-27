@@ -5,26 +5,26 @@
     android:layout_height="fill_parent">
     <Button
         android:id="@+id/TakePictureBtn"
-        android:layout_width="200px"
+        android:layout_width="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_height="wrap_content"
         android:padding="10dip"
         android:text="Take Image" />
     <Button
         android:text="Load Image"
-        android:layout_width="200px"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:padding="10dip"
-        android:layout_marginLeft="190px"
+        android:layout_marginLeft="300px"
         android:id="@+id/LoadPictureBtn" />
     <Button
         android:text="Tesseract OCR"
-        android:layout_width="200px"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:padding="10dip"
-        android:layout_marginLeft="380px"
+        android:layout_marginLeft="610px"
         android:id="@+id/TesseractBtn" />
     <ImageView
         android:src="@android:drawable/ic_menu_gallery"

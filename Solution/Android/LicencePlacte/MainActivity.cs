@@ -42,8 +42,14 @@ namespace LicencePlacte
         ImageView _imageView;
         private LicensePlateDetector _licensePlateDetector;
         private ListView myListView;
-        string imagePath = "";
-        static string ocrPath = "/storage/sdcard1";
+        string imagePath = "";        
+        static string ocrPath = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+        string timerTag = "";
+
+
+        SensorManager _sensorManager;
+        BatteryManager battery;
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -67,7 +73,20 @@ namespace LicencePlacte
                 Button takePicture = FindViewById<Button>(Resource.Id.TakePictureBtn);
                 takePicture.Click += TakeAPicture;
             }
+
+            _sensorManager = (SensorManager)GetSystemService(SensorService);          
+            battery = (BatteryManager)GetSystemService(BatteryService);
         }
+
+        protected override void OnResume()
+        {
+            base.OnResume();
+            _sensorManager.RegisterListener(this,
+                    _sensorManager.GetDefaultSensor(SensorType.AmbientTemperature),
+                    SensorDelay.Normal);
+            
+        }
+
 
         private void CreateDirectoryForPictures()
         {
@@ -193,22 +212,28 @@ namespace LicencePlacte
 
         private void ExecuteTesseract(object sender, EventArgs e)
         {
-            var manager = SensorManager.FromContext(this);
-            var type = SensorType.Accelerometer;
-            var accelerometer = manager.GetDefaultSensor(type);
-
-            manager.RegisterListener(
-                    this, accelerometer, SensorDelay.Fastest);
-
-            if (accelerometer == null)
-            {
-                // handle no acceleromenter
-            }
+            var previous = new StatisticalDTO();
+            var after = new StatisticalDTO();
+            previous = StatisticsDetails.GetDetailsResult();
             UMat uImg = new UMat(imagePath, ImreadModes.Color);
-          
-
             ProcessImageMethod(uImg, (int)OCRMethodEnum.Tesseract);
-            manager.UnregisterListener(this);
+            after =  StatisticsDetails.GetDetailsResult();
+
+            ShowStatisticalResult(previous, after);
+        }
+
+        private void ShowStatisticalResult(StatisticalDTO previous, StatisticalDTO after)
+        {
+            var result = "Results\n" 
+               + "CpuTemp = " + previous.CpuTemp + " + " + (after.CpuTemp - previous.CpuTemp).ToString() + "oC\n"
+               + "CpuUser = " + previous.CpuUser + " + " + (after.CpuUser - previous.CpuUser).ToString() + "%\n"
+               + "CpuSystem = " + previous.CpuSystem + " + " + (after.CpuSystem - previous.CpuSystem).ToString() + "%\n"
+               + "CpuIOW = " + previous.CpuIOW + " + " + (after.CpuIOW - previous.CpuIOW).ToString() + "%\n"
+               + "CpuIRQ = " + previous.CpuIRQ + " + " + (after.CpuIRQ - previous.CpuIRQ).ToString() + "%\n"
+               + "BatteryTemp = " + previous.BatteryTemp + " + " + (after.BatteryTemp - previous.BatteryTemp).ToString() + "oC\n"
+               + "BatteryLevel = " + previous.BatteryLevel + " + " + (after.BatteryLevel - previous.BatteryLevel).ToString() + "ms\n"
+               + "TimeSpend = " + previous.BatteryTemp + "\n";
+
         }
 
         private void SetImageBitmap(Bitmap image)
@@ -483,8 +508,9 @@ namespace LicencePlacte
         {
             var refinnedWords = new List<string>();
             watch.Stop(); //stop the timer
-            TextView textViewTime = new TextView(this);
-            textViewTime.Text = string.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
+           
+            //Set timer variable
+            timerTag = string.Format("License Plate Recognition time: {0} milli-seconds", watch.Elapsed.TotalMilliseconds);
 
             Android.Graphics.Point startPoint = new Android.Graphics.Point(10, 10);
 
@@ -546,12 +572,13 @@ namespace LicencePlacte
 
         public void OnAccuracyChanged(Sensor sensor, [GeneratedEnum] SensorStatus accuracy)
         {
-            throw new NotImplementedException();
+            
+            StatisticsDetails.GetDetailsResult();
         }
 
         public void OnSensorChanged(SensorEvent e)
         {
-            throw new NotImplementedException();
+            StatisticsDetails.GetDetailsResult();
         }
     }
 
