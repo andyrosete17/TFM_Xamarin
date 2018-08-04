@@ -1,4 +1,4 @@
-﻿namespace LicencePlacte.DTOs
+﻿namespace LicencePlate.DTOs
 {
     public class StatisticalDTO
     {

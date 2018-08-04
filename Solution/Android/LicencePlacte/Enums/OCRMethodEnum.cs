@@ -1,4 +1,4 @@
-﻿namespace LicencePlacte.Enums
+﻿namespace LicencePlate.Enums
 {
     public enum OCRMethodEnum
     {

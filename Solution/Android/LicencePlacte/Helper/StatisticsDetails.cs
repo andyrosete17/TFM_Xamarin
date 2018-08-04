@@ -4,11 +4,11 @@ using Android.OS;
 using Android.Widget;
 using Java.IO;
 using Java.Lang;
-using LicencePlacte.DTOs;
+using LicencePlate.DTOs;
 using System;
 using System.Collections.Generic;
 
-namespace LicencePlacte.Helper
+namespace LicencePlate.Helper
 {
     public class StatisticsDetails
     {

@@ -13,11 +13,9 @@ using Android.Widget;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using Emgu.CV.Util;
-using Java.IO;
-using LicencePlacte.DTOs;
-using LicencePlacte.Enums;
-using LicencePlacte.Helper;
+using LicencePlate.DTOs;
+using LicencePlate.Enums;
+using LicencePlate.Helper;
 using LicensePlateRecognition;
 using LicensePlateRecognition.Enums;
 using System;
@@ -29,9 +27,8 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace LicencePlacte
+namespace LicencePlate
 {
     [Activity(Label = "LicencePlate", MainLauncher = true)]
     public class MainActivity : Activity, ISensorEventListener

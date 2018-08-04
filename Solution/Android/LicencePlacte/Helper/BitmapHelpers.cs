@@ -1,6 +1,6 @@
 ﻿using Android.Graphics;
 
-namespace LicencePlacte.Helper
+namespace LicencePlate.Helper
 {
     public static class BitmapHelpers
     {

@@ -1,7 +1,7 @@
 ﻿using Android.Graphics;
 using Java.IO;
 
-namespace LicencePlacte.DTOs
+namespace LicencePlate.DTOs
 {
     public static class App
     {
