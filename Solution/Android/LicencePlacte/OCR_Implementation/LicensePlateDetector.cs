@@ -53,13 +53,13 @@ namespace LicensePlateRecognition
         private static void TesseractDownloadLangFile(String folder, String lang)
         {
             String subfolderName = "tessdata";
-            String folderName = System.IO.Path.Combine(folder, subfolderName);
-            if (!System.IO.Directory.Exists(folderName))
+            String folderName = Path.Combine(folder, subfolderName);
+            if (!Directory.Exists(folderName))
             {
-                System.IO.Directory.CreateDirectory(folderName);
+                Directory.CreateDirectory(folderName);
             }
-            String dest = System.IO.Path.Combine(folderName, String.Format("{0}.traineddata", lang));
-            if (!System.IO.File.Exists(dest))
+            String dest = Path.Combine(folderName, String.Format("{0}.traineddata", lang));
+            if (!File.Exists(dest))
                 using (System.Net.WebClient webclient = new System.Net.WebClient())
                 {
                     String source =
@@ -91,7 +91,7 @@ namespace LicensePlateRecognition
                     ? path
                     : String.Format("{0}{1}", path, System.IO.Path.DirectorySeparatorChar);
 
-                _ocr = new Emgu.CV.OCR.Tesseract(pathFinal, lang, mode);
+                _ocr = new Tesseract(pathFinal, lang, mode);
             }
             catch (System.Net.WebException e)
             {
@@ -101,6 +101,7 @@ namespace LicensePlateRecognition
             catch (Exception e)
             {
                 _ocr = null;
+                throw new Exception("Unable to find the correct path. Error Message: " + e.Message);
             }
         }
 
@@ -313,7 +314,7 @@ namespace LicensePlateRecognition
                                         strBuilder = TesseractOCR.GetText(filteredPlate, _ocr);
                                         break;
                                     }
-                                    ///TODO add this later
+                                ///TODO add this later
                                 //case 2:
                                 //    {
                                 //        strBuilder = GoogleApiOCR.GetText(filteredPlate);
