@@ -9,9 +9,9 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: global::Android.Runtime.ResourceDesignerAttribute("LicencePlacte.Resource", IsApplication=true)]
+[assembly: global::Android.Runtime.ResourceDesignerAttribute("LicencePlateV2.Resource", IsApplication=true)]
 
-namespace LicencePlacte
+namespace LicencePlateV2
 {
 	
 	
