@@ -13,6 +13,7 @@ using Android.Widget;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using LicencePlacte;
 using LicencePlate.DTOs;
 using LicencePlate.Enums;
 using LicencePlate.Helper;
@@ -40,9 +41,9 @@ namespace LicencePlate
         private LicensePlateDetector _licensePlateDetector;
         private ListView myListView;
         string imagePath = "";        
-        static string ocrPath = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
-        string timerTag = "";
-
+        static string ocrPath = Application.Context.GetExternalFilesDir(null).ToString();
+        static int requiredWidth = 200;
+        static int requiredHeight = 200;
 
         SensorManager _sensorManager;
         BatteryManager battery;
@@ -149,9 +150,11 @@ namespace LicencePlate
                 Stream stream = ContentResolver.OpenInputStream(data.Data);
                 Bitmap image = BitmapFactory.DecodeStream(stream);
 
-                int height = Resources.DisplayMetrics.HeightPixels;
-                int width = _imageView.Height;
+                int height = _imageView.Height;
+                int width = _imageView.Width;
                 imagePath = GetRealPathFromURI(data.Data);
+                BitmapFactory.Options options = new BitmapFactory.Options { InJustDecodeBounds = true };
+                var x = BitmapFactory.DecodeFile(data.Data.ToString(), options);
                 Bitmap test = BitmapHelpers.LoadAndResizeBitmap(imagePath, width, height);
                 _imageView.SetImageBitmap(test);
             }
@@ -212,8 +215,7 @@ namespace LicencePlate
         {
             var mediaStoreImagesMediaData = "_data";
             string[] projection = { mediaStoreImagesMediaData };
-            ICursor cursor = this.ManagedQuery(contentUri, projection,
-                                                                null, null, null);
+            ICursor cursor = ManagedQuery(contentUri, projection, null, null, null);
             int columnIndex = cursor.GetColumnIndexOrThrow(mediaStoreImagesMediaData);
             cursor.MoveToFirst();
             return cursor.GetString(columnIndex);

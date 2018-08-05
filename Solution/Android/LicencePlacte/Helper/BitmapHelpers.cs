@@ -26,7 +26,15 @@ namespace LicencePlate.Helper
             // Now we will load the image and have BitmapFactory resize it for us.
             options.InSampleSize = inSampleSize;
             options.InJustDecodeBounds = false;
-            Bitmap resizedBitmap = BitmapFactory.DecodeFile(fileName, options);
+            Bitmap resizedBitmap;
+            if (options.OutHeight == 0 || options.OutWidth == 0)
+            {
+                resizedBitmap = BitmapFactory.DecodeFile(fileName);
+            }
+            else
+            {
+                resizedBitmap = BitmapFactory.DecodeFile(fileName, options);
+            }
 
             return resizedBitmap;
         }
